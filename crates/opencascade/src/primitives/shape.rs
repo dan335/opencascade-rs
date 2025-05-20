@@ -12,7 +12,7 @@ use opencascade_sys::ffi;
 use std::path::Path;
 
 pub struct Shape {
-    pub(crate) inner: UniquePtr<ffi::TopoDS_Shape>,
+    pub inner: UniquePtr<ffi::TopoDS_Shape>,
 }
 
 impl AsRef<Shape> for Shape {
@@ -274,7 +274,7 @@ impl TorusBuilder {
 }
 
 impl Shape {
-    pub(crate) fn from_shape(shape: &ffi::TopoDS_Shape) -> Self {
+    pub fn from_shape(shape: &ffi::TopoDS_Shape) -> Self {
         let inner = ffi::TopoDS_Shape_to_owned(shape);
 
         Self { inner }
@@ -679,6 +679,38 @@ impl Shape {
         }
 
         results
+    }
+
+    pub fn points_along_line(&self, line_origin: DVec3, line_dir: DVec3) -> Vec<DVec3> {
+        let mut intersector = ffi::BRepIntCurveSurface_Inter_ctor();
+        let tolerance = 0.0001;
+        intersector.pin_mut().Init(
+            &self.inner,
+            &ffi::gp_Lin_ctor(&make_point(line_origin), &make_dir(line_dir)),
+            tolerance,
+        );
+
+        let mut results = vec![];
+
+        while intersector.More() {
+            let point = ffi::BRepIntCurveSurface_Inter_point(&intersector);
+            results.push(dvec3(point.X(), point.Y(), point.Z()));
+            intersector.pin_mut().Next();
+        }
+
+        results
+    }
+
+    pub fn line_intersects(&self, line_origin: DVec3, line_dir: DVec3) -> bool {
+        let mut intersector = ffi::BRepIntCurveSurface_Inter_ctor();
+        let tolerance = 0.0001;
+        intersector.pin_mut().Init(
+            &self.inner,
+            &ffi::gp_Lin_ctor(&make_point(line_origin), &make_dir(line_dir)),
+            tolerance,
+        );
+
+        intersector.More()
     }
 
     #[must_use]

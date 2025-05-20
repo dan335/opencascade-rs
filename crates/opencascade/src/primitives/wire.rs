@@ -11,8 +11,10 @@ use cxx::UniquePtr;
 use glam::{dvec3, DVec3};
 use opencascade_sys::ffi;
 
+use super::{EdgeIterator, VertexIterator};
+
 pub struct Wire {
-    pub(crate) inner: UniquePtr<ffi::TopoDS_Wire>,
+    pub inner: UniquePtr<ffi::TopoDS_Wire>,
 }
 
 impl AsRef<Wire> for Wire {
@@ -38,7 +40,7 @@ impl Default for EdgeConnection {
 }
 
 impl Wire {
-    pub(crate) fn from_wire(wire: &ffi::TopoDS_Wire) -> Self {
+    pub fn from_wire(wire: &ffi::TopoDS_Wire) -> Self {
         let inner = ffi::TopoDS_Wire_to_owned(wire);
 
         Self { inner }
@@ -123,6 +125,28 @@ impl Wire {
         Self::from_make_wire(make_wire)
     }
 
+    pub fn vertices(&self) -> VertexIterator {
+        let explorer = ffi::TopExp_Explorer_ctor(
+            ffi::cast_wire_to_shape(&self.inner),
+            ffi::TopAbs_ShapeEnum::TopAbs_VERTEX,
+        );
+
+        VertexIterator { explorer }
+    }
+
+    pub fn edges(&self) -> EdgeIterator {
+        let explorer = ffi::TopExp_Explorer_ctor(
+            ffi::cast_wire_to_shape(&self.inner),
+            ffi::TopAbs_ShapeEnum::TopAbs_EDGE,
+        );
+
+        EdgeIterator { explorer }
+    }
+
+    pub fn orientation(&self) -> WireOrientation {
+        WireOrientation::from(self.inner.Orientation())
+    }
+
     #[must_use]
     pub fn mirror_along_axis(&self, axis_origin: DVec3, axis_dir: DVec3) -> Self {
         let axis_dir = make_dir(axis_dir);
@@ -188,6 +212,18 @@ impl Wire {
         let result_wire = ffi::TopoDS_cast_to_wire(offset_shape);
 
         Self::from_wire(result_wire)
+    }
+
+    pub fn subtract_shape(&self, shape: &Shape, projection_direction: DVec3) -> Wire {
+        let mut make_projection =
+            ffi::BRepProj_Projection_ctor(&self.inner, shape, projection_direction);
+
+        let mut projected_wires = Vec::new();
+        while make_projection.More() {
+            let wire = Wire::from_wire(make_projection.Current());
+            projected_wires.push(wire);
+            make_projection.pin_mut().Next();
+        }
     }
 
     /// Sweep the wire along a path to produce a shell
@@ -281,5 +317,27 @@ impl WireBuilder {
 
     pub fn build(self) -> Wire {
         Wire::from_make_wire(self.inner)
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum WireOrientation {
+    Forward,
+    Reversed,
+    Internal,
+    External,
+}
+
+impl From<ffi::TopAbs_Orientation> for WireOrientation {
+    fn from(orientation: ffi::TopAbs_Orientation) -> Self {
+        match orientation {
+            ffi::TopAbs_Orientation::TopAbs_FORWARD => Self::Forward,
+            ffi::TopAbs_Orientation::TopAbs_REVERSED => Self::Reversed,
+            ffi::TopAbs_Orientation::TopAbs_INTERNAL => Self::Internal,
+            ffi::TopAbs_Orientation::TopAbs_EXTERNAL => Self::External,
+            ffi::TopAbs_Orientation { repr } => {
+                panic!("TopAbs_Orientation had an unrepresentable value: {repr}")
+            },
+        }
     }
 }

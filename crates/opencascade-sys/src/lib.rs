@@ -467,6 +467,7 @@ pub mod ffi {
         type TopAbs_Orientation;
         pub fn Orientation(self: &TopoDS_Shape) -> TopAbs_Orientation;
         pub fn Orientation(self: &TopoDS_Face) -> TopAbs_Orientation;
+        pub fn Orientation(self: &TopoDS_Wire) -> TopAbs_Orientation;
 
         // Compound Shapes
         type TopoDS_Compound;
@@ -798,6 +799,22 @@ pub mod ffi {
         pub fn IsDone(self: &BRepOffsetAPI_MakeOffset) -> bool;
 
         type GeomAbs_JoinType;
+
+        // Projection
+        type BRepProj_Projection;
+
+        #[cxx_name = "construct_unique"]
+        pub fn BRepProj_Projection_ctor(
+            wire: &TopoDS_Shape,
+            shape: &TopoDS_Shape,
+            direction: &gp_Pnt,
+        ) -> UniquePtr<BRepProj_Projection>;
+
+        pub fn IsDone(self: &BRepProj_Projection) -> bool;
+        pub fn More(self: &BRepProj_Projection) -> bool;
+        pub fn Next(self: Pin<&mut BRepProj_Projection>);
+        pub fn Current(self: &BRepProj_Projection) -> &TopoDS_Wire;
+        pub fn Shape(self: &BRepProj_Projection) -> &TopoDS_Compound;
 
         // Solids
         type BRepOffsetAPI_MakeThickSolid;

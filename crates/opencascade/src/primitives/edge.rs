@@ -3,7 +3,7 @@ use cxx::UniquePtr;
 use glam::{dvec3, DVec3};
 use opencascade_sys::ffi;
 
-use super::make_vec;
+use super::{make_vec, VertexIterator};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum EdgeType {
@@ -147,6 +147,15 @@ impl Edge {
         let point = ffi::BRepAdaptor_Curve_value(&curve, last_param);
 
         dvec3(point.X(), point.Y(), point.Z())
+    }
+
+    pub fn vertices(&self) -> VertexIterator {
+        let explorer = ffi::TopExp_Explorer_ctor(
+            ffi::cast_edge_to_shape(&self.inner),
+            ffi::TopAbs_ShapeEnum::TopAbs_VERTEX,
+        );
+
+        VertexIterator { explorer }
     }
 
     pub fn approximation_segments(&self) -> ApproximationSegmentIterator {

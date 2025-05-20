@@ -11,6 +11,8 @@ use cxx::UniquePtr;
 use glam::{dvec3, DVec3};
 use opencascade_sys::ffi;
 
+use super::WireIterator;
+
 pub struct Face {
     pub(crate) inner: UniquePtr<ffi::TopoDS_Face>,
 }
@@ -246,6 +248,15 @@ impl Face {
         EdgeIterator { explorer }
     }
 
+    pub fn wires(&self) -> WireIterator {
+        let explorer = ffi::TopExp_Explorer_ctor(
+            ffi::cast_face_to_shape(&self.inner),
+            ffi::TopAbs_ShapeEnum::TopAbs_WIRE,
+        );
+
+        WireIterator { explorer }
+    }
+
     pub fn center_of_mass(&self) -> DVec3 {
         let mut props = ffi::GProp_GProps_ctor();
 
@@ -360,7 +371,7 @@ impl Face {
 }
 
 pub struct CompoundFace {
-    inner: UniquePtr<ffi::TopoDS_Compound>,
+    pub inner: UniquePtr<ffi::TopoDS_Compound>,
 }
 
 impl AsRef<CompoundFace> for CompoundFace {

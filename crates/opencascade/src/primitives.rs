@@ -148,6 +148,85 @@ impl EdgeIterator {
     }
 }
 
+pub struct WireIterator {
+    explorer: UniquePtr<ffi::TopExp_Explorer>,
+}
+
+impl Iterator for WireIterator {
+    type Item = Wire;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.explorer.More() {
+            let wire = ffi::TopoDS_cast_to_wire(self.explorer.Current());
+            let wire = Wire::from_wire(wire);
+
+            self.explorer.pin_mut().Next();
+
+            Some(wire)
+        } else {
+            None
+        }
+    }
+}
+
+pub struct VertexIterator {
+    explorer: UniquePtr<ffi::TopExp_Explorer>,
+}
+
+impl Iterator for VertexIterator {
+    type Item = Vertex;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.explorer.More() {
+            let vertex = ffi::TopoDS_cast_to_vertex(self.explorer.Current());
+            let vertex = Vertex::from_vertex(vertex);
+
+            self.explorer.pin_mut().Next();
+
+            Some(vertex)
+        } else {
+            None
+        }
+    }
+}
+
+pub struct ShapeIterator {
+    explorer: UniquePtr<ffi::TopExp_Explorer>,
+}
+
+impl Iterator for ShapeIterator {
+    type Item = Shape;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.explorer.More() {
+            let shape = self.explorer.Current();
+            let shape = Shape::from_shape(shape);
+
+            self.explorer.pin_mut().Next();
+
+            Some(shape)
+        } else {
+            None
+        }
+    }
+}
+
+// impl WireIterator {
+//     pub fn parallel_to(
+//         self,
+//         direction: Direction,
+//     ) -> impl Iterator<Item = <Self as Iterator>::Item> {
+//         let normalized_dir = direction.normalized_vec();
+
+//         self.filter(move |edge| {
+//             wire.edge_type() == EdgeType::Line
+//                 && 1.0
+//                     - (wire.end_point() - wire.start_point()).normalize().dot(normalized_dir).abs()
+//                     < 0.0001
+//         })
+//     }
+// }
+
 pub struct FaceIterator {
     explorer: UniquePtr<ffi::TopExp_Explorer>,
 }

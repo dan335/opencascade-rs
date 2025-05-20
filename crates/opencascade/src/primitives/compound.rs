@@ -2,6 +2,8 @@ use crate::primitives::Shape;
 use cxx::UniquePtr;
 use opencascade_sys::ffi;
 
+use super::ShapeIterator;
+
 pub struct Compound {
     pub(crate) inner: UniquePtr<ffi::TopoDS_Compound>,
 }
@@ -13,7 +15,7 @@ impl AsRef<Compound> for Compound {
 }
 
 impl Compound {
-    pub(crate) fn from_compound(compound: &ffi::TopoDS_Compound) -> Self {
+    pub fn from_compound(compound: &ffi::TopoDS_Compound) -> Self {
         let inner = ffi::TopoDS_Compound_to_owned(compound);
 
         Self { inner }
@@ -39,5 +41,14 @@ impl Compound {
 
         let compound = ffi::TopoDS_cast_to_compound(&compound_shape);
         Self::from_compound(compound)
+    }
+
+    pub fn shapes(&self) -> ShapeIterator {
+        let explorer = ffi::TopExp_Explorer_ctor(
+            ffi::cast_compound_to_shape(&self.inner),
+            ffi::TopAbs_ShapeEnum::TopAbs_SHAPE,
+        );
+
+        ShapeIterator { explorer }
     }
 }

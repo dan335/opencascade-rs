@@ -4,7 +4,7 @@ use glam::DVec3;
 use opencascade_sys::ffi;
 
 pub struct Vertex {
-    pub(crate) inner: UniquePtr<ffi::TopoDS_Vertex>,
+    pub inner: UniquePtr<ffi::TopoDS_Vertex>,
 }
 
 // You'll see several of these `impl AsRef` blocks for the various primitive
@@ -30,5 +30,16 @@ impl Vertex {
         let inner = ffi::TopoDS_Vertex_to_owned(vertex);
 
         Self { inner }
+    }
+
+    pub(crate) fn from_vertex(vertex: &ffi::TopoDS_Vertex) -> Self {
+        let inner = ffi::TopoDS_Vertex_to_owned(vertex);
+
+        Self { inner }
+    }
+
+    pub fn point(&self) -> DVec3 {
+        let gp_point = opencascade_sys::ffi::BRep_Tool_Pnt(&self.inner);
+        DVec3::new(gp_point.X(), gp_point.Y(), gp_point.Z())
     }
 }
